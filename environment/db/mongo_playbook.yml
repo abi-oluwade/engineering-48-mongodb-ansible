@@ -1,0 +1,24 @@
+---
+- hosts: 127.0.0.1
+  remote_user: root
+  become: yes
+  vars:
+     mongoDB_Port : 27017
+  tasks:
+  # - name: Enable root login
+  #   shell: sudo cp ~/.ssh/authorized_keys /root/.ssh/
+  - name: Import the public key used by the package management system
+    apt_key: keyserver=hkp://keyserver.ubuntu.com:80 id=7F0CEB10 state=present
+  - name: Add MongoDB repository
+    apt_repository: repo='deb http://repo.mongodb.org/apt/ubuntu trusty/mongodb-org/3.2 multiverse' state=present
+  - name: super-ugly hack to allow unauthenticated packages to install
+    copy: content='APT::Get::AllowUnauthenticated "true";' dest=/etc/apt/apt.conf.d/99temp owner=root group=root mode=0644
+  - name: install mongodb
+    apt: pkg=mongodb-org state=latest update_cache=yes
+  - name: downgrade mongo
+    shell: sudo apt-get install -y mongodb-org=3.2.20 mongodb-org-server=3.2.20 mongodb-org-shell=3.2.20 mongodb-org-mongos=3.2.20 mongodb-org-tools=3.2.20 --allow-downgrades
+    notify:
+    - start mongodb
+  handlers:
+    - name: start mongodb
+      service: name=mongod state=started
